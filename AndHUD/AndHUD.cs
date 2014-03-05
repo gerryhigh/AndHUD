@@ -39,47 +39,47 @@ namespace AndroidHUD
 		readonly object dialogLock = new object();
 
 
-		public void Show (Context context, string status = null, int progress = -1, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void Show (Context context, string status = null, int progress = -1, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, bool centered = true, Action cancelCallback = null)
 		{
 			if (progress >= 0)
-				showProgress (context, progress, status, maskType, timeout, clickCallback);
+				showProgress (context, progress, status, maskType, timeout, clickCallback, cancelCallback);
 			else
-				showStatus (context, true, status, maskType, timeout, clickCallback);
+				showStatus (context, true, status, maskType, timeout, clickCallback, centered, cancelCallback);
 		}
 
-		public void ShowSuccess(Context context, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowSuccess(Context context, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_successstatus), status, maskType, timeout, clickCallback);
+			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_successstatus), status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowError(Context context, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowError(Context context, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_errorstatus), status, maskType, timeout, clickCallback);
+			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_errorstatus), status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowSuccessWithStatus(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowSuccessWithStatus(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_successstatus), status, maskType, timeout, clickCallback);
+			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_successstatus), status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowErrorWithStatus(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowErrorWithStatus(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_errorstatus), status, maskType, timeout, clickCallback);
+			showImage (context, context.Resources.GetDrawable (Resource.Drawable.ic_errorstatus), status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowImage(Context context, int drawableResourceId, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowImage(Context context, int drawableResourceId, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, context.Resources.GetDrawable(drawableResourceId), status, maskType, timeout, clickCallback);
+			showImage (context, context.Resources.GetDrawable(drawableResourceId), status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowImage(Context context, Android.Graphics.Drawables.Drawable drawable, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		public void ShowImage(Context context, Android.Graphics.Drawables.Drawable drawable, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showImage (context, drawable, status, maskType, timeout, clickCallback);
+			showImage (context, drawable, status, maskType, timeout, clickCallback, cancelCallback);
 		}
 
-		public void ShowToast(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, bool centered = true, Action clickCallback = null)
+		public void ShowToast(Context context, string status, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, bool centered = true, Action clickCallback = null, Action cancelCallback = null)
 		{
-			showStatus (context, false, status, maskType, timeout, clickCallback, centered);
+			showStatus (context, false, status, maskType, timeout, clickCallback, centered, cancelCallback);
 		}
 
 		public void Dismiss(Context context = null)
@@ -87,7 +87,7 @@ namespace AndroidHUD
 			DismissCurrent (context);
 		}
 
-		void showStatus (Context context, bool spinner, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, bool centered = true)
+		void showStatus (Context context, bool spinner, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, bool centered = true, Action cancelCallback = null)
 		{
 			if (timeout == null)
 				timeout = TimeSpan.Zero;
@@ -101,7 +101,7 @@ namespace AndroidHUD
 			{
 				if (CurrentDialog == null)
 				{
-					SetupDialog (context, maskType, (a, d, m) => {
+					SetupDialog (context, maskType, cancelCallback, (a, d, m) => {
 						View view;
 
 						view = LayoutInflater.From (context).Inflate (Resource.Layout.loading, null);
@@ -125,19 +125,18 @@ namespace AndroidHUD
 							statusText.Visibility = string.IsNullOrEmpty(status) ? ViewStates.Gone : ViewStates.Visible;
 						}
 
+						if (!centered)
+						{
+							d.Window.SetGravity (GravityFlags.Bottom);
+							var p = d.Window.Attributes;
+
+							p.Y = DpToPx (context, 22);
+
+							d.Window.Attributes = p;
+						}
+							
 						return view;
 					});
-
-					if (!centered)
-					{
-						CurrentDialog.Window.SetGravity (GravityFlags.Bottom);
-						var p = CurrentDialog.Window.Attributes;
-
-						p.Y = DpToPx (context, 22);
-
-						CurrentDialog.Window.Attributes = p;
-
-					}
 
 					if (timeout > TimeSpan.Zero)
 					{
@@ -156,7 +155,7 @@ namespace AndroidHUD
 				else
 				{
 
-					Application.SynchronizationContext.Post(state => {
+					Application.SynchronizationContext.Send(state => {
 						if (statusText != null)
 							statusText.Text = status ?? "";
 					}, null);
@@ -171,7 +170,7 @@ namespace AndroidHUD
 			return px;
 		}
 
-		void showProgress(Context context, int progress, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		void showProgress(Context context, int progress, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
 			if (timeout == null)
 				timeout = TimeSpan.Zero;
@@ -183,7 +182,7 @@ namespace AndroidHUD
 			{
 				if (CurrentDialog == null)
 				{
-					SetupDialog (context, maskType, (a, d, m) => {
+					SetupDialog (context, maskType, cancelCallback, (a, d, m) => {
 						var inflater = LayoutInflater.FromContext(context);
 						var view = inflater.Inflate(Resource.Layout.loadingprogress, null);
 
@@ -223,7 +222,7 @@ namespace AndroidHUD
 				}
 				else
 				{
-					Application.SynchronizationContext.Post(state => {
+					Application.SynchronizationContext.Send(state => {
 						progressWheel.SetProgress (progress);
 						statusText.Text = status ?? "";
 					}, null);
@@ -232,7 +231,7 @@ namespace AndroidHUD
 		}
 
 
-		void showImage(Context context, Android.Graphics.Drawables.Drawable image, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null)
+		void showImage(Context context, Android.Graphics.Drawables.Drawable image, string status = null, MaskType maskType = MaskType.Black, TimeSpan? timeout = null, Action clickCallback = null, Action cancelCallback = null)
 		{
 			if (timeout == null)
 				timeout = TimeSpan.Zero;
@@ -244,7 +243,7 @@ namespace AndroidHUD
 			{
 				if (CurrentDialog == null)
 				{
-					SetupDialog (context, maskType, (a, d, m) => {
+					SetupDialog (context, maskType, cancelCallback, (a, d, m) => {
 						var inflater = LayoutInflater.FromContext(context);
 						var view = inflater.Inflate(Resource.Layout.loadingimage, null);
 
@@ -284,7 +283,7 @@ namespace AndroidHUD
 				}
 				else
 				{
-					Application.SynchronizationContext.Post(state => {
+					Application.SynchronizationContext.Send(state => {
 						imageView.SetImageDrawable(image);
 						statusText.Text = status ?? "";
 					}, null);
@@ -294,9 +293,9 @@ namespace AndroidHUD
 
 
 
-		void SetupDialog(Context context, MaskType maskType, Func<Context, Dialog, MaskType, View> customSetup)
+		void SetupDialog(Context context, MaskType maskType, Action cancelCallback, Func<Context, Dialog, MaskType, View> customSetup)
 		{
-			Application.SynchronizationContext.Post(state => {
+			Application.SynchronizationContext.Send(state => {
 
 				CurrentDialog = new Dialog(context);
 
@@ -305,12 +304,18 @@ namespace AndroidHUD
 				if (maskType != MaskType.Black)
 					CurrentDialog.Window.ClearFlags(WindowManagerFlags.DimBehind);
 
+				if (maskType == MaskType.None)
+					CurrentDialog.Window.SetFlags(WindowManagerFlags.NotTouchModal, WindowManagerFlags.NotTouchModal);
+
 				CurrentDialog.Window.SetBackgroundDrawable(new Android.Graphics.Drawables.ColorDrawable(Android.Graphics.Color.Transparent));
 
 				var customView = customSetup(context, CurrentDialog, maskType);
 
 				CurrentDialog.SetContentView (customView);
-				CurrentDialog.SetCancelable (false);	
+
+				CurrentDialog.SetCancelable (cancelCallback != null);	
+				if (cancelCallback != null)
+					CurrentDialog.CancelEvent += (sender, e) => cancelCallback();
 
 				CurrentDialog.Show ();
 
@@ -325,12 +330,10 @@ namespace AndroidHUD
 				{
 					waitDismiss.Set ();
 
-					(context as Activity).RunOnUiThread(delegate{
-
-						//Application.SynchronizationContext.Post(state => {
-
+					Action actionDismiss = () =>
+					{
 						CurrentDialog.Hide ();
-						CurrentDialog.Cancel ();
+						CurrentDialog.Dismiss ();
 
 						statusText = null;
 						statusObj = null;
@@ -339,8 +342,39 @@ namespace AndroidHUD
 						CurrentDialog = null;
 
 						waitDismiss.Reset ();
+					};
+						
+					//First try the SynchronizationContext
+					if (Application.SynchronizationContext != null)
+					{
+						Application.SynchronizationContext.Send (state => actionDismiss (), null);
+						return;
+					}
 
-					});//, null);
+					//Next let's try and get the Activity from the CurrentDialog
+					if (CurrentDialog != null && CurrentDialog.Window != null && CurrentDialog.Window.Context != null)
+					{
+						var activity = CurrentDialog.Window.Context as Activity;
+
+						if (activity != null)
+						{
+							activity.RunOnUiThread (actionDismiss);
+							return;
+						}
+					}
+				
+					//Finally if all else fails, let's see if someone passed in a context to dismiss and it
+					// happens to also be an Activity
+					if (context != null)
+					{
+						var activity = context as Activity;
+
+						if (activity != null)
+						{
+							activity.RunOnUiThread (actionDismiss);
+							return;
+						}
+					}
 
 				}
 			}
@@ -349,6 +383,7 @@ namespace AndroidHUD
 
 	public enum MaskType
 	{
+		None = 1,
 		Clear = 2,
 		Black = 3
 	}
